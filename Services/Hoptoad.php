@@ -437,6 +437,28 @@ class Services_Hoptoad
 	}
 	
 	/**
+	 * Put the error on a beanstalk queue so a separate process can
+	 * send it off to Hoptoad via HTTP. Requires the pheanstalk client.
+	 * Config:
+	 * $BEANSTALK_SERVERS[] = array(
+	 *    'host' => 'example.com',
+	 *    'port' => '11300'
+	 * );
+	 * @author Aaron Parecki
+	 */
+	public function beanstalkRequest($url, $headers, $body)
+	{
+		global $BEANSTALK_SERVERS;
+		require_once('pheanstalk/pheanstalk_init.php');
+
+		$k = array_rand($BEANSTALK_SERVERS);
+		$pheanstalk = new Pheanstalk($BEANSTALK_SERVERS[$k]['host'], $BEANSTALK_SERVERS[$k]['port']);
+
+		$pheanstalk->useTube('hoptoad');
+		$pheanstalk->put(json_encode(array('url'=>$url, 'headers'=>$headers, 'body'=>$body)));
+	}
+
+	/**
 	 * Send the request to Hoptoad using Zend
 	 * @return integer
 	 * @author Rich Cavanaugh
