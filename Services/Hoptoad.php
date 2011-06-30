@@ -6,28 +6,16 @@
  * @package  Services_Hoptoad
  * @author   Rich Cavanaugh <no@email>
  * @author   Till Klampaeckel <till@php.net>
+ * @author   Aaron Parecki <aaron@parecki.com>
  * @license  
  * @version  GIT: $Id$
- * @link     http://github.com/till/php-hoptoad-notifier
- */
-
-
-/**
- * Services_Hoptoad
- *
- * @category error
- * @package  Services_Hoptoad
- * @author   Rich Cavanaugh <no@email>
- * @author   Till Klampaeckel <till@php.net>
- * @license  
- * @version  Release: @package_version@
- * @link     http://github.com/rich/php-hoptoad-notifier
+ * @link     http://github.com/geoloqi/php-hoptoad-notifier
  */
 class Services_Hoptoad
 {
 	const NOTIFIER_NAME = 'php-hoptoad-notifier';
-	const NOTIFIER_VERSION = '0.2.0';
-	const NOTIFIER_URL = 'http://github.com/rich/php-hoptoad-notifier';
+	const NOTIFIER_VERSION = '0.2.1';
+	const NOTIFIER_URL = 'http://github.com/geoloqi/php-hoptoad-notifier';
 	const NOTIFIER_API_VERSION = '2.0';
 
 	protected $error_class;
@@ -225,7 +213,11 @@ class Services_Hoptoad
 
 		if (isset($_REQUEST)) $this->addXmlVars($request, 'params', $this->params());
 		if (isset($_SESSION)) $this->addXmlVars($request, 'session', $this->session());
-		if (isset($_SERVER)) $this->addXmlVars($request, 'cgi-data', $this->cgi_data());
+		if (isset($_SERVER)) {
+			if(isset($_SERVER['argv']))
+				unset($_SERVER['argv']);
+			$this->addXmlVars($request, 'cgi-data', $this->cgi_data());
+		}
 
 		$env = $doc->addChild('server-environment');
 		$env->addChild('project-root', $this->project_root());
@@ -344,20 +336,34 @@ class Services_Hoptoad
 
 
 	/**
-	 * get the request uri
+	 * get the request uri, or a pseudo request uri for CLI scripts
 	 * @return string
-	 * @author Scott Woods
+	 * @author Aaron Parecki
 	 **/
 	function request_uri() {
-		if (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
-			$protocol = 'https';
+		if(isset($_SERVER['argv'])) {
+			$protocol = 'cli';
+			$host = gethostname();
+			$path = '/' . $_SERVER['SCRIPT_FILENAME'];
+			if(count($_SERVER['argv']) > 1) {
+				unset($_SERVER['argv'][0]);
+				$query_string = '?' . http_build_query($_SERVER['argv']);
+			} else {
+				$query_string = '';
+			}
+		
+			return $protocol . '://' . $host . $path . $query_string;
 		} else {
-			$protocol = 'http';
+			if (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
+				$protocol = 'https';
+			} else {
+				$protocol = 'http';
+			}
+			$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+			$path = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+			$query_string = isset($_SERVER['QUERY_STRING']) && !empty($_SERVER['QUERY_STRING']) ? ('?' . $_SERVER['QUERY_STRING']) : '';
+			return $protocol . '://' . $host . $path . $query_string;
 		}
-		$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-		$path = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
-		$query_string = isset($_SERVER['QUERY_STRING']) && !empty($_SERVER['QUERY_STRING']) ? ('?' . $_SERVER['QUERY_STRING']) : '';
-		return "{$protocol}://{$host}{$path}{$query_string}";
 	}
 
 	/**
@@ -415,7 +421,7 @@ class Services_Hoptoad
 		foreach ($headers as $key => $val) {
 			$header_strings[] = "{$key}: {$val}";
 		}
-
+		
 		$curlHandle = curl_init();
 		curl_setopt($curlHandle, CURLOPT_URL,            $url);
 		curl_setopt($curlHandle, CURLOPT_POST,           1);
@@ -429,7 +435,7 @@ class Services_Hoptoad
 		curl_close($curlHandle);
 		return $status;
 	}
-
+	
 	/**
 	 * Send the request to Hoptoad using Zend
 	 * @return integer
