@@ -70,6 +70,7 @@ class Services_Hoptoad
 	 **/
 	public function installNotifierHandlers()
 	{
+		register_shutdown_function(array($this, "fatalErrorHandler"));
 		set_error_handler(array($this, "errorHandler"));
 		set_exception_handler(array($this, "exceptionHandler"));		
 	}
@@ -135,6 +136,18 @@ class Services_Hoptoad
 		$this->notify(get_class($exception), $exception->getMessage(), $exception->getFile(), $exception->getLine(), $exception->getTrace());
 	}
 
+	/**
+	* Handle fatal errors
+	*
+	* @return void
+	* @author Robert Rotarius
+	*/
+	public function fatalErrorHandler() 
+	{
+		$error = error_get_last(); 
+		$this->notify($error['type'], $error['message'], $error['file'], $error['line'], debug_backtrace());
+	}
+  
 	/**
 	 * Set the values to be used for the next notice sent to Hoptoad
 	 * @return void
