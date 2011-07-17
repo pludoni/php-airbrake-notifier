@@ -1,5 +1,5 @@
 <?php
-class Services_Hoptoad_CodeIgniter extends Services_Hoptoad {
+class Services_Airbrake_CodeIgniter extends Services_Airbrake {
 	var $ci;
 
 	function setup() {

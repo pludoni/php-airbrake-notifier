@@ -1,7 +1,7 @@
 
 <?php
 require_once 'PHPUnit/Framework.php';
-require_once 'Services/Hoptoad.php';
+require_once 'Services/Airbrake.php';
  
 $_SERVER = array(
   'HTTP_HOST'    => 'localhost',
@@ -26,15 +26,15 @@ $_POST = array(
 
 $_REQUEST = array_merge($_GET, $_POST);
 
-class HoptoadTest extends PHPUnit_Framework_TestCase
+class AirbrakeTest extends PHPUnit_Framework_TestCase
 {
     protected function setUp()
 		{
-			$this->hoptoad = new Services_Hoptoad('myAPIKey', 'production', 'pear', false, 2);
+			$this->airbrake = new Services_Airbrake('myAPIKey', 'production', 'pear', false, 2);
 
       $trace = array(
         array(
-          'class' => 'Hoptoad',
+          'class' => 'Airbrake',
           'file'  => 'file.php',
           'line'  => 23,
           'function' => 'foo',
@@ -52,20 +52,20 @@ class HoptoadTest extends PHPUnit_Framework_TestCase
           'function' => 'bar',
         ),
       );
-      $this->hoptoad->setParamsForNotify('ERROR', 'Something went wrong', 'foo', 23, $trace);
+      $this->airbrake->setParamsForNotify('ERROR', 'Something went wrong', 'foo', 23, $trace);
     }
     
     public function testRequestURI()
     {
       // check protocol support
-      $this->assertEquals('http://localhost/example.php', $this->hoptoad->request_uri());
+      $this->assertEquals('http://localhost/example.php', $this->airbrake->request_uri());
       $_SERVER['SERVER_PORT'] = 443;
-      $this->assertEquals('https://localhost/example.php', $this->hoptoad->request_uri());
+      $this->assertEquals('https://localhost/example.php', $this->airbrake->request_uri());
       $_SERVER['SERVER_PORT'] = 80;
       
       // Check query string support.
       $_SERVER['QUERY_STRING'] = 'commit=true';
-      $this->assertEquals('http://localhost/example.php?commit=true', $this->hoptoad->request_uri());
+      $this->assertEquals('http://localhost/example.php?commit=true', $this->airbrake->request_uri());
       $_SERVER['QUERY_STRING'] = '';
     }
   
@@ -82,7 +82,7 @@ class HoptoadTest extends PHPUnit_Framework_TestCase
 			</root>
 XML;
 			$doc = new SimpleXMLElement('<root />');
-			$this->hoptoad->addXmlBacktrace($doc);
+			$this->airbrake->addXmlBacktrace($doc);
 			$this->assertXmlStringEqualsXmlString($expected_xml, $doc->asXML());
     }
     
@@ -99,15 +99,15 @@ XML;
 			</root>
 XML;
 			$doc = new SimpleXMLElement('<root />');
-			$this->hoptoad->addXmlVars($doc, 'params', $_REQUEST);
+			$this->airbrake->addXmlVars($doc, 'params', $_REQUEST);
       $this->assertXmlStringEqualsXmlString($expected_xml, $doc->asXML());
     }
 
 		public function testNotificationBody() 
 		{
-			$xmllint = popen('xmllint --noout --schema test/hoptoad_2_0.xsd - 2> /dev/null', 'w');
+			$xmllint = popen('xmllint --noout --schema test/airbrake_2_0.xsd - 2> /dev/null', 'w');
 			if ($xmllint) {
-				fwrite($xmllint, $this->hoptoad->buildXmlNotice());
+				fwrite($xmllint, $this->airbrake->buildXmlNotice());
 				$status = pclose($xmllint);
 				$this->assertEquals(0, $status, "XML output did not validate against schema.");
 			} else {

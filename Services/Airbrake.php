@@ -1,21 +1,21 @@
 <?php
 /**
- * Services_Hoptoad
+ * Services_Airbrake
  *
  * @category error
- * @package  Services_Hoptoad
+ * @package  Services_Airbrake
  * @author   Rich Cavanaugh <no@email>
  * @author   Till Klampaeckel <till@php.net>
  * @author   Aaron Parecki <aaron@parecki.com>
  * @license  
  * @version  GIT: $Id$
- * @link     http://github.com/geoloqi/php-hoptoad-notifier
+ * @link     http://github.com/geoloqi/php-airbrake-notifier
  */
-class Services_Hoptoad
+class Services_Airbrake
 {
-	const NOTIFIER_NAME = 'php-hoptoad-notifier';
-	const NOTIFIER_VERSION = '0.2.1';
-	const NOTIFIER_URL = 'http://github.com/geoloqi/php-hoptoad-notifier';
+	const NOTIFIER_NAME = 'php-airbrake-notifier';
+	const NOTIFIER_VERSION = '0.2.2';
+	const NOTIFIER_URL = 'http://github.com/geoloqi/php-airbrake-notifier';
 	const NOTIFIER_API_VERSION = '2.0';
 
 	protected $error_class;
@@ -38,7 +38,7 @@ class Services_Hoptoad
 	 */
 	protected $timeout;
 
-	public $client; // pear, curl or zend
+	public $client; // pear, curl, zend or beanstalk
 
 	/**
 	 * @var mixed $apiKey
@@ -52,15 +52,15 @@ class Services_Hoptoad
 
 	/**
 	 * Initialize the chosen notifier and install the error
-	 * and exception handlers that connect to Hoptoad
+	 * and exception handlers that connect to Airbrake
 	 *
 	 * @return void
 	 * @author Rich Cavanaugh
 	 */
-	public static function installHandlers($apiKey=NULL, $environment=NULL, $client=NULL, $class='Services_Hoptoad')
+	public static function installHandlers($apiKey=NULL, $environment=NULL, $client=NULL, $class='Services_Airbrake')
 	{
-		$hoptoad = new $class($apiKey, $environment, $client);
-		$hoptoad->installNotifierHandlers();
+		$airbrake = new $class($apiKey, $environment, $client);
+		$airbrake->installNotifierHandlers();
 	}
 
 	/**
@@ -145,11 +145,12 @@ class Services_Hoptoad
 	public function fatalErrorHandler() 
 	{
 		$error = error_get_last(); 
-		$this->notify($error['type'], $error['message'], $error['file'], $error['line'], debug_backtrace());
+		if($error)
+			$this->notify($error['type'], $error['message'], $error['file'], $error['line'], debug_backtrace());
 	}
   
 	/**
-	 * Set the values to be used for the next notice sent to Hoptoad
+	 * Set the values to be used for the next notice sent to Airbrake
 	 * @return void
 	 * @author Rich Cavanaugh
 	 **/
@@ -164,7 +165,7 @@ class Services_Hoptoad
 	}
 
 	/**
-	 * Pass the error and environment data on to Hoptoad
+	 * Pass the error and environment data on to Airbrake
 	 *
 	 * @param mixed  $error_class
 	 * @param string $message
@@ -180,7 +181,7 @@ class Services_Hoptoad
 	{
 		$this->setParamsForNotify($error_class, $message, $file, $line, $trace, $component);
 
-		$url = "http://hoptoadapp.com/notifier_api/v2/notices";
+		$url = "http://airbrakeapp.com/notifier_api/v2/notices";
 		$headers = array(
 			'Accept'				=> 'text/xml, application/xml',
 			'Content-Type'	=> 'text/xml'
@@ -199,7 +200,7 @@ class Services_Hoptoad
 
 	/**
 	 * Build up the XML to post according to the documentation at:
-	 * http://help.hoptoadapp.com/faqs/api-2/notifier-api-v2
+	 * http://help.airbrakeapp.com/faqs/api-2/notifier-api-v2
 	 * @return string
 	 * @author Rich Cavanaugh
 	 **/
@@ -240,7 +241,7 @@ class Services_Hoptoad
 	}
 
 	/**
-	 * Add a Hoptoad var block to the XML
+	 * Add a Airbrake var block to the XML
 	 * @return void
 	 * @author Rich Cavanaugh
 	 **/
@@ -256,7 +257,7 @@ class Services_Hoptoad
 	}
 
 	/**
-	 * Add a Hoptoad backtrace to the XML
+	 * Add a Airbrake backtrace to the XML
 	 * @return void
 	 * @author Rich Cavanaugh
 	 **/
@@ -268,7 +269,7 @@ class Services_Hoptoad
 		$line_node->addAttribute('number', $this->line);
 
 		foreach ($this->trace as $entry) {
-			if (isset($entry['class']) && $entry['class'] == 'Services_Hoptoad') continue;
+			if (isset($entry['class']) && $entry['class'] == 'Services_Airbrake') continue;
 
 			$line_node = $backtrace->addChild('line');
 			$line_node->addAttribute('file', $entry['file']);
@@ -380,10 +381,10 @@ class Services_Hoptoad
 	}
 
 	/**
-	 * @param mixed $code The HTTP status code from Hoptoad.
+	 * @param mixed $code The HTTP status code from Airbrake.
 	 *
 	 * @return void
-	 * @throws RuntimeException Error message from hoptoad, translated to a RuntimeException.
+	 * @throws RuntimeException Error message from airbrake, translated to a RuntimeException.
 	 */
 	protected function handleErrorResponse($code)
 	{
@@ -395,10 +396,10 @@ class Services_Hoptoad
 			$msg = 'The submitted notice was invalid - check the notice xml against the schema.';
 			break;
 		case '500':
-			$msg = 'Unexpected errors - submit a bug report at http://help.hoptoadapp.com.';
+			$msg = 'Unexpected errors - submit a bug report at http://help.airbrakeapp.com.';
 			break;
 		default:
-			$msg = 'Unknown error code from Hoptoad\'s API: ' . $code;
+			$msg = 'Unknown error code from Airbrake\'s API: ' . $code;
 			break;
 		}
 
@@ -406,7 +407,7 @@ class Services_Hoptoad
 	}
 
 	/**
-	 * Send the request to Hoptoad using PEAR
+	 * Send the request to Airbrake using PEAR
 	 * @return integer
 	 * @author Rich Cavanaugh
 	 **/
@@ -424,7 +425,7 @@ class Services_Hoptoad
 	}
 
 	/**
-	 * Send the request to Hoptoad using Curl
+	 * Send the request to Airbrake using Curl
 	 * @return integer
 	 * @author Rich Cavanaugh
 	 **/
@@ -451,7 +452,7 @@ class Services_Hoptoad
 	
 	/**
 	 * Put the error on a beanstalk queue so a separate process can
-	 * send it off to Hoptoad via HTTP. Requires the pheanstalk client.
+	 * send it off to Airbrake via HTTP. Requires the pheanstalk client.
 	 * Config:
 	 * $BEANSTALK_SERVERS[] = array(
 	 *    'host' => 'example.com',
@@ -467,12 +468,12 @@ class Services_Hoptoad
 		$k = array_rand($BEANSTALK_SERVERS);
 		$pheanstalk = new Pheanstalk($BEANSTALK_SERVERS[$k]['host'], $BEANSTALK_SERVERS[$k]['port']);
 
-		$pheanstalk->useTube('hoptoad');
+		$pheanstalk->useTube('airbrake');
 		$pheanstalk->put(json_encode(array('url'=>$url, 'headers'=>$headers, 'body'=>$body)));
 	}
 
 	/**
-	 * Send the request to Hoptoad using Zend
+	 * Send the request to Airbrake using Zend
 	 * @return integer
 	 * @author Rich Cavanaugh
 	 **/

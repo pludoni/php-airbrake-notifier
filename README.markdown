@@ -1,6 +1,6 @@
 # Introduction
 
-This is a simple [Hoptoad](http://hoptoadapp.com) notifier for PHP. It's been used in a few production sites now with success. It's not quite as fully featured as the official Ruby notifier but it works well.
+This is a simple [Airbrake](http://airbrakeapp.com), (formerly Hoptoad) notifier for PHP. It's been used in a few production sites now with success. It's not quite as fully featured as the official Ruby notifier but it works well.
 
 # Thanks
 
