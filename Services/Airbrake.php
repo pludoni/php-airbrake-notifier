@@ -7,7 +7,7 @@
  * @author   Rich Cavanaugh <no@email>
  * @author   Till Klampaeckel <till@php.net>
  * @author   Aaron Parecki <aaron@parecki.com>
- * @license  
+ * @license
  * @version  GIT: $Id$
  * @link     http://github.com/geoloqi/php-airbrake-notifier
  */
@@ -72,7 +72,7 @@ class Services_Airbrake
 	{
 		register_shutdown_function(array($this, "fatalErrorHandler"));
 		set_error_handler(array($this, "errorHandler"));
-		set_exception_handler(array($this, "exceptionHandler"));		
+		set_exception_handler(array($this, "exceptionHandler"));
 	}
 
 	/**
@@ -85,7 +85,7 @@ class Services_Airbrake
 	 * @param int $timeout
 	 * @return void
 	 * @author Rich Cavanaugh
-	 */	
+	 */
 	function __construct($apiKey, $environment='production', $client='pear', $reportESTRICT=false, $timeout=2)
 	{
 		$this->apiKey = $apiKey;
@@ -110,10 +110,10 @@ class Services_Airbrake
 	/**
 	 * Handle a php error
 	 *
-	 * @param string $code 
-	 * @param string $message 
-	 * @param string $file 
-	 * @param string $line 
+	 * @param string $code
+	 * @param string $message
+	 * @param string $file
+	 * @param string $line
 	 * @return void
 	 * @author Rich Cavanaugh
 	 */
@@ -127,7 +127,7 @@ class Services_Airbrake
 	/**
 	 * Handle a raised exception
 	 *
-	 * @param Exception $exception 
+	 * @param Exception $exception
 	 * @return void
 	 * @author Rich Cavanaugh
 	 */
@@ -142,13 +142,13 @@ class Services_Airbrake
 	* @return void
 	* @author Robert Rotarius
 	*/
-	public function fatalErrorHandler() 
+	public function fatalErrorHandler()
 	{
-		$error = error_get_last(); 
+		$error = error_get_last();
 		if($error)
 			$this->notify($error['type'], $error['message'], $error['file'], $error['line'], debug_backtrace());
 	}
-  
+
 	/**
 	 * Set the values to be used for the next notice sent to Airbrake
 	 * @return void
@@ -179,9 +179,17 @@ class Services_Airbrake
 	 */
 	function notify($error_class, $message, $file, $line, $trace, $component=NULL)
 	{
+    $ignore = array(
+      E_WARNING,
+      E_NOTICE
+    );
+    if (in_array($error_class, $ignore)) {
+      // send no mail for stuff
+      return;
+    }
 		$this->setParamsForNotify($error_class, $message, $file, $line, $trace, $component);
 
-		$url = "http://airbrakeapp.com/notifier_api/v2/notices";
+		$url = "http://pludoni.de:4321/notifier_api/v2/notices";
 		$headers = array(
 			'Accept'				=> 'text/xml, application/xml',
 			'Content-Type'	=> 'text/xml'
@@ -251,7 +259,11 @@ class Services_Airbrake
 
 		$node = $parent->addChild($key);
 		foreach ($source as $key => $val) {
+      if (is_array($val)) {
+        $val = print_r($val, true);
+      }
 			$var_node = $node->addChild('var', $val);
+
 			$var_node->addAttribute('key', $key);
 		}
 	}
@@ -334,7 +346,7 @@ class Services_Airbrake
 	function environment() {
 		return $this->environment;
 	}
-	
+
 	/**
 	 * project_root
 	 * @return string
@@ -355,9 +367,13 @@ class Services_Airbrake
 	 * @author Aaron Parecki
 	 **/
 	function request_uri() {
-		if(isset($_SERVER['argv'])) {
+		if(isset($_SERVER['argv']) and !isset($_SERVER["HTTP_HOST"])) {
 			$protocol = 'cli';
-			$host = gethostname();
+      if (function_exists("gethostname")) {
+        $host = gethostname();
+      } else {
+        $host = `hostname`;
+      }
 			$path = '/' . $_SERVER['SCRIPT_FILENAME'];
 			if(count($_SERVER['argv']) > 1) {
 				unset($_SERVER['argv'][0]);
@@ -365,7 +381,7 @@ class Services_Airbrake
 			} else {
 				$query_string = '';
 			}
-		
+
 			return $protocol . '://' . $host . $path . $query_string;
 		} else {
 			if (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
@@ -435,7 +451,7 @@ class Services_Airbrake
 		foreach ($headers as $key => $val) {
 			$header_strings[] = "{$key}: {$val}";
 		}
-		
+
 		$curlHandle = curl_init();
 		curl_setopt($curlHandle, CURLOPT_URL,            $url);
 		curl_setopt($curlHandle, CURLOPT_POST,           1);
@@ -449,7 +465,7 @@ class Services_Airbrake
 		curl_close($curlHandle);
 		return $status;
 	}
-	
+
 	/**
 	 * Put the error on a beanstalk queue so a separate process can
 	 * send it off to Airbrake via HTTP. Requires the pheanstalk client.
